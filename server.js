@@ -220,6 +220,10 @@ async function consturctServer(moduleDefs) {
 
       try {
         const moduleResponse = await moduleDef.module(query, request)
+        if (typeof moduleResponse === 'string') {
+          res.redirect(moduleResponse)
+          return
+        }
         console.log('[OK]', decode(req.originalUrl))
 
         const cookies = moduleResponse.cookie
