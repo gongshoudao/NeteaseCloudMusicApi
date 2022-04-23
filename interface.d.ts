@@ -1607,3 +1607,19 @@ export function nickname_check(
     nickname: string
   } & RequestBaseConfig,
 ): Promise<Response>
+
+export function musician_tasks_new(params: RequestBaseConfig): Promise<Response>
+
+export function playlist_update_playcount(
+  params: {
+    id?: number | string
+  } & RequestBaseConfig,
+): Promise<Response>
+
+export function vip_timemachine(
+  params: {
+    startTime?: number | string
+    endTime?: number | string
+    limit?: number | string
+  } & RequestBaseConfig,
+): Promise<Response>

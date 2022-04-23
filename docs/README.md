@@ -253,7 +253,11 @@
 235. 最近播放-播客
 236. 签到进度
 237. 重复昵称检测
-
+238. 歌手粉丝数量
+239. 音乐人任务(新)
+240. 内部版本接口
+241. 歌单更新播放量
+242. 黑胶时光机
 
 ## 安装
 
@@ -413,6 +417,8 @@ $ sudo docker run -d -p 3000:3000 netease-music-api
 存结果的接口 , 可在请求 url 后面加一个时间戳参数使 url 不同 , 例子 :
 `/simi/playlist?id=347230&timestamp=1503019930000` (之所以加入缓存机制是因为项目早期没有缓存机制，很多 issues 都是报 IP 高频，请按自己需求改造缓存中间件(app.js)，源码不复杂)
 
+!> 不要频繁调登录接口,不然可能会被风控,登录状态还存在就不要重复调登录接口
+
 !> 如果是跨域请求 , 请在所有请求带上 `xhrFields: { withCredentials: true }` (axios 为 `withCredentials: true`, Fetch API 为 `fetch(url, { credentials: 'include' })`), 或直接手动传入 cookie (参见 `登录`), 否则
 可能会因为没带上 cookie 导致 301, 具体例子可看 `public/test.html`, 访问`http://localhost:3000/test.html`(默认端口的话) 例子使用 jQuery 和 axios
 
@@ -424,8 +430,7 @@ $ sudo docker run -d -p 3000:3000 netease-music-api
 
 !> 文档可能会有缓存 , 如果文档版本和 github 上的版本不一致,请清除缓存再查看
 
-!> 由于网易限制,此项目在国外服务器或部分国内云服务上使用会受到限制,如 `460 cheating异常`,如需解决 , 可使用大陆服务器或者使用代理 , 感谢 [@hiyangguo](https://github.com/hiyangguo)提出的[解决方法](https://github.com/Binaryify/NeteaseCloudMusicApi/issues/29#issuecomment-298358438):
-在 '/util/request.js' 的 'headers' 处增加 `X-Real-IP':'211.161.244.70' // 任意国内 IP`
+!> 由于网易限制,此项目在国外服务器或部分国内云服务上使用会受到限制,如 `460 cheating异常`,如需解决 , 可使用`realIP`参数,传进国内IP解决,如:`?realIP=116.25.146.177`
 即可解决
 
 !> 图片加上 `?param=宽y高` 可控制图片尺寸，如 `http://p4.music.126.net/JzNK4a5PjjPIXAgVlqEc5Q==/109951164154280311.jpg?param=200y200`, `http://p4.music.126.net/JzNK4a5PjjPIXAgVlqEc5Q==/109951164154280311.jpg?param=50y50`
@@ -435,6 +440,8 @@ $ sudo docker run -d -p 3000:3000 netease-music-api
 ### 登录
 
 说明 : 登录有三个接口,建议使用`encodeURIComponent`对密码编码或者使用`POST`请求,避免某些特殊字符无法解析,如`#`(`#`在 url 中会被识别为 hash,而不是 query)
+
+不要频繁调登录接口,不然可能会被风控,登录状态还存在就不要重复调登录接口
 
 #### 1. 手机登录
 
@@ -522,7 +529,7 @@ v3.30.0 后支持手动传入 cookie,登录接口返回内容新增 `cookie` 字
 
 ### 刷新登录
 
-说明 : 调用此接口 , 可刷新登录状态
+说明 : 调用此接口 , 可刷新登录状态,返回内容包含新的cookie(不支持刷新二维码登录的cookie)
 
 **调用例子 :** `/login/refresh`
 
@@ -1331,7 +1338,7 @@ tags: 歌单标签
 
 **可选参数 :** `limit` : 限制获取歌曲的数量，默认值为当前歌单的歌曲数量
 
-**可选参数 :** `offset` : 默认值为0，用于歌曲的分页，计算方法为 `limit` * `offset`<= 你得到的歌曲 <= `limit` * `offset + 1` 
+**可选参数 :** `offset` : 默认值为0
 
 **接口地址 :** `/playlist/track/all`
 
@@ -1341,11 +1348,10 @@ tags: 歌单标签
 > 
 > 你传入limit=10&offset=0等价于limit=10，你会得到第1-10首歌曲
 > 
-> 你传入limit=10&offset=1，你会得到第11-20首歌曲
+> 你传入limit=10&offset=1，你会得到第2-11首歌曲
 > 
-> 如果你设置limit=10&offset=2，你就会得到第21-30首歌曲
-> 
-> 如果你offset超出了最大偏移量，即超出了`歌曲数量`/`limit`，则offset重置为最大偏移量
+> 如果你设置limit=10&offset=2，你就会得到第3-12首歌曲
+
 
 ### 歌单详情动态
 
@@ -1356,6 +1362,20 @@ tags: 歌单标签
 **接口地址 :** `/playlist/detail/dynamic`
 
 **调用例子 :** `/playlist/detail/dynamic?id=24381616`
+
+
+### 歌单更新播放量
+
+说明 : 调用后可更新歌单播放量
+
+**必选参数 :** `id` : 歌单 id
+
+**接口地址 :** `/playlist/update/playcount`
+
+**调用例子 :** `/playlist/update/playcount?id=24381616`
+
+
+
 
 ### 获取音乐 url
 
@@ -3575,6 +3595,17 @@ type='1009' 获取其 id, 如`/search?keywords= 代码时间 &type=1009`
 ### 歌手粉丝
 
 说明 : 调用此接口 , 传入歌手 id, 可获取歌手粉丝
+**必选参数 :** `id` : 歌手 id
+
+
+**接口地址 :** `/artist/fans`
+
+**调用例子 :** `/artist/fans?id=2116&limit=10&offset=0`
+
+### 歌手粉丝数量
+
+说明 : 调用此接口 , 传入歌手 id, 可获取歌手粉丝数量
+
 
 **必选参数 :** `id` : 歌手 id
 
@@ -3582,9 +3613,9 @@ type='1009' 获取其 id, 如`/search?keywords= 代码时间 &type=1009`
 
 `offset`: 偏移数量 , 用于分页 , 如 :( 评论页数 -1)\*10, 其中 10 为 limit 的值
 
-**接口地址 :** `/artist/fans`
+**接口地址 :** `/artist/follow/count`
 
-**调用例子 :** `/artist/fans?id=2116&limit=10&offset=0`
+**调用例子 :** `/artist/follow/count?id=2116`
 
 ### 数字专辑详情
 
@@ -3628,11 +3659,19 @@ type='1009' 获取其 id, 如`/search?keywords= 代码时间 &type=1009`
 
 ### 音乐人任务
 
-说明 : 音乐人登录后调用此接口 , 可获取音乐人任务。返回的数据中`status`字段为任务状态，0 表示任务未开始，10 表示任务正在进行中，20 表示任务完成，但未领取云豆，100 表示任务完成，并且已经领取了相应的云豆
+说明 : 音乐人登录后调用此接口 , 可获取音乐人任务。返回的数据中`status`字段为任务状态，0 表示任务未开始，10 表示任务正在进行中，20 表示任务完成，但未领取云豆，100 表示任务完成，并且已经领取了相应的云豆(貌似只能获取到做过的任务了)
 
 **接口地址 :** `/musician/tasks`
 
 **调用例子 :** `/musician/tasks`
+
+### 音乐人任务(新)
+
+说明 : 音乐人登录后调用此接口 , 可获取音乐人任务。返回的数据中`status`字段为任务状态，0 表示任务未开始，10 表示任务正在进行中，20 表示任务完成，但未领取云豆，100 表示任务完成，并且已经领取了相应的云豆
+
+**接口地址 :** `/musician/tasks/new`
+
+**调用例子 :** `/musician/tasks/new`
 
 ### 账号云豆数
 
@@ -3785,7 +3824,27 @@ type='1009' 获取其 id, 如`/search?keywords= 代码时间 &type=1009`
 
 **接口地址 :** `/signin/progress`
 
-**调用例子 :** `/signin/progress`
+**调用例子 :** `/signin/progress?moduleId=1207signin-1207signin`
+
+### 内部版本接口
+
+说明 : 调用此接口 , 可获得内部版本号(从package.json读取)
+
+**接口地址 :** `/inner/version`
+
+**调用例子 :** `/inner/version`
+
+### 黑胶时光机
+
+说明 : 调用此接口 , 可获得黑胶时光机数据
+
+**可选参数 :** `startTime` : 开始时间
+`endTime` : 结束时间
+`limit` : 返回数量 , 默认为 60
+
+**接口地址 :** `/vip/timemachine`
+
+**调用例子 :** `/vip/timemachine` `/vip/timemachine?startTime=1638288000000&endTime=1640966399999&limit=10`（2021年12月） `/vip/timemachine?startTime=1609430400&endTime=1640966399999&limit=60`(2021年)
 
 
 ## 离线访问此文档
